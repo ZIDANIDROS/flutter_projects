@@ -8,8 +8,13 @@ void main() {
 class Item {
   final int id;
   final String name;
+  final String description; // Field baru
 
-  Item({required this.id, required this.name});
+  Item({
+    required this.id,
+    required this.name,
+    required this.description,
+  });
 }
 
 // Aplikasi utama
@@ -21,24 +26,21 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  // State untuk melacak item yang dipilih
   Item? _selectedItem;
 
-  // Daftar item contoh
+  // Daftar item yang sudah dilengkapi dengan deskripsi
   final List<Item> _items = [
-    Item(id: 1, name: 'Item 1'),
-    Item(id: 2, name: 'Item 2'),
-    Item(id: 3, name: 'Item 3'),
+    Item(id: 1, name: 'Item 1', description: 'Ini adalah deskripsi untuk Item 1.'),
+    Item(id: 2, name: 'Item 2', description: 'Ini adalah deskripsi untuk Item 2.'),
+    Item(id: 3, name: 'Item 3', description: 'Ini adalah deskripsi untuk Item 3.'),
   ];
 
-  // Fungsi untuk menangani pemilihan item
   void _selectItem(Item item) {
     setState(() {
       _selectedItem = item;
     });
   }
 
-  // Fungsi untuk kembali ke HomeScreen
   void _clearSelection() {
     setState(() {
       _selectedItem = null;
@@ -57,9 +59,7 @@ class _MyAppState extends State<MyApp> {
         ),
       ),
       home: Navigator(
-        // Daftar pages didefinisikan secara deklaratif
         pages: [
-          // Selalu tampilkan HomeScreen
           MaterialPage(
             key: const ValueKey('HomeScreen'),
             child: HomeScreen(
@@ -67,7 +67,6 @@ class _MyAppState extends State<MyApp> {
               onItemSelected: _selectItem,
             ),
           ),
-          // Tampilkan DetailScreen jika ada item yang dipilih
           if (_selectedItem != null)
             MaterialPage(
               key: ValueKey(_selectedItem),
@@ -77,10 +76,8 @@ class _MyAppState extends State<MyApp> {
               ),
             ),
         ],
-        // Menangani pop (kembali) dari tumpukan navigasi
         onPopPage: (route, result) {
           if (!route.didPop(result)) return false;
-          // Bersihkan item yang dipilih saat pop
           _clearSelection();
           return true;
         },
@@ -89,7 +86,7 @@ class _MyAppState extends State<MyApp> {
   }
 }
 
-// Layar Utama (HomeScreen)
+// Layar Utama
 class HomeScreen extends StatelessWidget {
   final List<Item> items;
   final Function(Item) onItemSelected;
@@ -123,7 +120,7 @@ class HomeScreen extends StatelessWidget {
   }
 }
 
-// Layar Detail (DetailScreen)
+// Layar Detail
 class DetailScreen extends StatelessWidget {
   final Item item;
   final VoidCallback onBack;
@@ -153,13 +150,14 @@ class DetailScreen extends StatelessWidget {
               'ID: ${item.id}',
               style: const TextStyle(fontSize: 16),
             ),
+            Text(
+              'Deskripsi: ${item.description}',
+              style: const TextStyle(fontSize: 16),
+              textAlign: TextAlign.center,
+            ),
             const SizedBox(height: 20),
             ElevatedButton(
               onPressed: onBack,
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-                textStyle: const TextStyle(fontSize: 16),
-              ),
               child: const Text('Back to Home'),
             ),
           ],

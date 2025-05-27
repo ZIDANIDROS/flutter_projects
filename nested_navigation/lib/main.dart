@@ -23,7 +23,7 @@ class MyApp extends StatelessWidget {
   }
 }
 
-// Layar Utama (HomeScreen)
+// Halaman utama
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
@@ -50,10 +50,6 @@ class HomeScreen extends StatelessWidget {
                   MaterialPageRoute(builder: (context) => const SetupFlowScreen()),
                 );
               },
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-                textStyle: const TextStyle(fontSize: 16),
-              ),
               child: const Text('Start Setup Flow'),
             ),
           ],
@@ -63,7 +59,7 @@ class HomeScreen extends StatelessWidget {
   }
 }
 
-// Layar Alur Pengaturan (SetupFlowScreen) dengan Nested Navigator
+// Alur pengaturan dengan nested navigator
 class SetupFlowScreen extends StatefulWidget {
   const SetupFlowScreen({super.key});
 
@@ -72,17 +68,18 @@ class SetupFlowScreen extends StatefulWidget {
 }
 
 class _SetupFlowScreenState extends State<SetupFlowScreen> {
-  // Kunci untuk Navigator bersarang
   final _navigatorKey = GlobalKey<NavigatorState>();
 
-  // Fungsi untuk navigasi ke ConnectDeviceScreen
   void _onDeviceFound() {
+    _navigatorKey.currentState!.pushNamed('confirm_device');
+  }
+
+  void _onDeviceConfirmed() {
     _navigatorKey.currentState!.pushNamed('connect_device');
   }
 
-  // Fungsi untuk menyelesaikan alur pengaturan
   void _completeSetup(BuildContext context) {
-    Navigator.pop(context); // Kembali ke HomeScreen
+    Navigator.pop(context); // kembali ke home
   }
 
   @override
@@ -91,7 +88,6 @@ class _SetupFlowScreenState extends State<SetupFlowScreen> {
       appBar: AppBar(
         title: const Text('Setup Flow'),
         centerTitle: true,
-        // Tombol kembali untuk keluar dari SetupFlow
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.pop(context),
@@ -106,6 +102,9 @@ class _SetupFlowScreenState extends State<SetupFlowScreen> {
             case 'find_devices':
               page = FindDevicesScreen(onDeviceFound: _onDeviceFound);
               break;
+            case 'confirm_device':
+              page = ConfirmDeviceScreen(onConfirm: _onDeviceConfirmed);
+              break;
             case 'connect_device':
               page = ConnectDeviceScreen(onSetupComplete: () => _completeSetup(context));
               break;
@@ -119,7 +118,7 @@ class _SetupFlowScreenState extends State<SetupFlowScreen> {
   }
 }
 
-// Layar Pencarian Perangkat (FindDevicesScreen)
+// Layar 1: Pencarian perangkat
 class FindDevicesScreen extends StatelessWidget {
   final VoidCallback onDeviceFound;
 
@@ -138,10 +137,6 @@ class FindDevicesScreen extends StatelessWidget {
           const SizedBox(height: 20),
           ElevatedButton(
             onPressed: onDeviceFound,
-            style: ElevatedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-              textStyle: const TextStyle(fontSize: 16),
-            ),
             child: const Text('Device Found'),
           ),
         ],
@@ -150,7 +145,41 @@ class FindDevicesScreen extends StatelessWidget {
   }
 }
 
-// Layar Koneksi Perangkat (ConnectDeviceScreen)
+// Layar 2: Konfirmasi perangkat (baru)
+class ConfirmDeviceScreen extends StatelessWidget {
+  final VoidCallback onConfirm;
+
+  const ConfirmDeviceScreen({super.key, required this.onConfirm});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Text(
+            'Confirm This Device?',
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 20),
+          ElevatedButton(
+            onPressed: onConfirm,
+            child: const Text('Yes, Proceed'),
+          ),
+          const SizedBox(height: 10),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context); // kembali ke pencarian
+            },
+            child: const Text('Back'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// Layar 3: Koneksi perangkat
 class ConnectDeviceScreen extends StatelessWidget {
   final VoidCallback onSetupComplete;
 
@@ -169,21 +198,13 @@ class ConnectDeviceScreen extends StatelessWidget {
           const SizedBox(height: 20),
           ElevatedButton(
             onPressed: onSetupComplete,
-            style: ElevatedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-              textStyle: const TextStyle(fontSize: 16),
-            ),
             child: const Text('Complete Setup'),
           ),
           const SizedBox(height: 10),
           ElevatedButton(
             onPressed: () {
-              Navigator.pop(context); // Kembali ke FindDevicesScreen
+              Navigator.pop(context); // kembali ke confirm
             },
-            style: ElevatedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-              textStyle: const TextStyle(fontSize: 16),
-            ),
             child: const Text('Back'),
           ),
         ],

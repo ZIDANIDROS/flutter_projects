@@ -12,15 +12,16 @@ class Item {
 class AppRouteInformationParser extends RouteInformationParser<RoutePath> {
   @override
   Future<RoutePath> parseRouteInformation(RouteInformation routeInformation) async {
-    // Menggunakan routeInformation.uri untuk mendapatkan Uri
     final uri = routeInformation.uri;
 
-    // Menangani rute root (/)
     if (uri.pathSegments.isEmpty) {
       return RoutePath.home();
     }
 
-    // Menangani rute /detail/:id
+    if (uri.pathSegments.length == 1 && uri.pathSegments[0] == 'settings') {
+      return RoutePath.settings(); // 🔁 ditambahkan
+    }
+
     if (uri.pathSegments.length == 2 && uri.pathSegments[0] == 'detail') {
       final id = int.tryParse(uri.pathSegments[1]);
       if (id != null) {
@@ -28,7 +29,6 @@ class AppRouteInformationParser extends RouteInformationParser<RoutePath> {
       }
     }
 
-    // Kembali ke home jika rute tidak dikenali
     return RoutePath.home();
   }
 
@@ -36,6 +36,9 @@ class AppRouteInformationParser extends RouteInformationParser<RoutePath> {
   RouteInformation restoreRouteInformation(RoutePath path) {
     if (path.isHome) {
       return RouteInformation(uri: Uri.parse('/'));
+    }
+    if (path.isSettings) { // 🔁 ditambahkan
+      return RouteInformation(uri: Uri.parse('/settings'));
     }
     if (path.isDetail) {
       return RouteInformation(uri: Uri.parse('/detail/${path.id}'));
@@ -47,48 +50,64 @@ class AppRouteInformationParser extends RouteInformationParser<RoutePath> {
 // Kelas untuk konfigurasi rute
 class RoutePath {
   final bool isHome;
+  final bool isSettings;
   final int? id;
 
   RoutePath.home()
       : isHome = true,
+        isSettings = false,
         id = null;
 
-  RoutePath.detail(this.id) : isHome = false;
+  RoutePath.settings() // 🔁 ditambahkan
+      : isHome = false,
+        isSettings = true,
+        id = null;
 
-  bool get isDetail => !isHome;
+  RoutePath.detail(this.id)
+      : isHome = false,
+        isSettings = false;
+
+  bool get isDetail => id != null;
 }
 
-// Kelas untuk router delegate
+// Router delegate
 class AppRouterDelegate extends RouterDelegate<RoutePath>
     with ChangeNotifier, PopNavigatorRouterDelegateMixin<RoutePath> {
   @override
   final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
   int? _selectedItemId;
+  bool _showSettings = false;
+
   final List<Item> _items = [
     Item(id: 1, name: 'Item 1'),
     Item(id: 2, name: 'Item 2'),
     Item(id: 3, name: 'Item 3'),
   ];
 
-  // Mengatur item yang dipilih
   void selectItem(int id) {
     _selectedItemId = id;
+    _showSettings = false;
     notifyListeners();
   }
 
-  // Kembali ke home
   void goHome() {
     _selectedItemId = null;
+    _showSettings = false;
+    notifyListeners();
+  }
+
+  void goToSettings() { // 🔁 ditambahkan
+    _selectedItemId = null;
+    _showSettings = true;
     notifyListeners();
   }
 
   @override
   RoutePath get currentConfiguration {
-    if (_selectedItemId == null) {
-      return RoutePath.home();
-    }
-    return RoutePath.detail(_selectedItemId);
+    if (_showSettings) return RoutePath.settings(); // 🔁 ditambahkan
+    if (_selectedItemId != null) return RoutePath.detail(_selectedItemId);
+    return RoutePath.home();
   }
 
   @override
@@ -96,15 +115,14 @@ class AppRouterDelegate extends RouterDelegate<RoutePath>
     return Navigator(
       key: navigatorKey,
       pages: [
-        // Selalu tampilkan HomeScreen
         MaterialPage(
           key: const ValueKey('HomeScreen'),
           child: HomeScreen(
             items: _items,
             onItemSelected: selectItem,
+            onSettingsPressed: goToSettings, // 🔁 ditambahkan
           ),
         ),
-        // Tampilkan DetailScreen jika ada item yang dipilih
         if (_selectedItemId != null)
           MaterialPage(
             key: ValueKey('DetailScreen-$_selectedItemId'),
@@ -112,6 +130,11 @@ class AppRouterDelegate extends RouterDelegate<RoutePath>
               item: _items.firstWhere((item) => item.id == _selectedItemId),
               onBack: goHome,
             ),
+          ),
+        if (_showSettings)
+          const MaterialPage( // 🔁 ditambahkan
+            key: ValueKey('SettingsScreen'),
+            child: SettingsScreen(),
           ),
       ],
       onPopPage: (route, result) {
@@ -126,8 +149,13 @@ class AppRouterDelegate extends RouterDelegate<RoutePath>
   Future<void> setNewRoutePath(RoutePath path) async {
     if (path.isHome) {
       _selectedItemId = null;
+      _showSettings = false;
+    } else if (path.isSettings) {
+      _selectedItemId = null;
+      _showSettings = true;
     } else if (path.isDetail && path.id != null) {
       _selectedItemId = path.id;
+      _showSettings = false;
     }
   }
 }
@@ -147,9 +175,6 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.teal,
         visualDensity: VisualDensity.adaptivePlatformDensity,
-        textTheme: const TextTheme(
-          bodyMedium: TextStyle(fontSize: 16),
-        ),
       ),
       routerDelegate: AppRouterDelegate(),
       routeInformationParser: AppRouteInformationParser(),
@@ -157,15 +182,17 @@ class MyApp extends StatelessWidget {
   }
 }
 
-// Layar Utama (HomeScreen)
+// HomeScreen
 class HomeScreen extends StatelessWidget {
   final List<Item> items;
   final Function(int) onItemSelected;
+  final VoidCallback onSettingsPressed; // 🔁 ditambahkan
 
   const HomeScreen({
     super.key,
     required this.items,
     required this.onItemSelected,
+    required this.onSettingsPressed, // 🔁 ditambahkan
   });
 
   @override
@@ -174,6 +201,12 @@ class HomeScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Home'),
         centerTitle: true,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.settings),
+            onPressed: onSettingsPressed, // 🔁 ditambahkan
+          )
+        ],
       ),
       body: ListView.builder(
         itemCount: items.length,
@@ -191,7 +224,7 @@ class HomeScreen extends StatelessWidget {
   }
 }
 
-// Layar Detail (DetailScreen)
+// DetailScreen
 class DetailScreen extends StatelessWidget {
   final Item item;
   final VoidCallback onBack;
@@ -213,24 +246,35 @@ class DetailScreen extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(
-              'Item: ${item.name}',
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            Text(
-              'ID: ${item.id}',
-              style: const TextStyle(fontSize: 16),
-            ),
+            Text('Item: ${item.name}', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            Text('ID: ${item.id}', style: const TextStyle(fontSize: 16)),
             const SizedBox(height: 20),
             ElevatedButton(
               onPressed: onBack,
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-                textStyle: const TextStyle(fontSize: 16),
-              ),
               child: const Text('Back to Home'),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+// 🔁 SettingsScreen baru
+class SettingsScreen extends StatelessWidget {
+  const SettingsScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Settings'),
+        centerTitle: true,
+      ),
+      body: const Center(
+        child: Text(
+          'Ini adalah halaman pengaturan.',
+          style: TextStyle(fontSize: 18),
         ),
       ),
     );
